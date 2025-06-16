@@ -1,15 +1,7 @@
-use thiserror::Error;
-
 use super::{
     header::{Application, ContentType, Text},
     ParseError,
 };
-
-#[derive(Error, Debug)]
-pub enum BodyError {
-    #[error("Failed to parse body: {0:?}")]
-    BodyParseError(String),
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Body {

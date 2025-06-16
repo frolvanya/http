@@ -1,11 +1,10 @@
-use std::{collections::HashMap, f32::consts::PI};
+use std::collections::HashMap;
 
 use thiserror::Error;
 use tokio::{
-    io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
 };
-use url::Url;
 
 mod body;
 mod header;

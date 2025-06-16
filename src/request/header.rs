@@ -1,11 +1,8 @@
 use url::Url;
 
-use std::{collections::HashMap, num::Saturating};
+use std::collections::HashMap;
 
 use crate::request::{Parse, ParseError};
-
-// const CONTENT_TYPE_PREFIX: &str = "Content-Type: ";
-// const HOST_PREFIX: &str = "Host: ";
 
 #[derive(Debug)]
 pub struct Header {

@@ -1,16 +1,42 @@
+use thiserror::Error;
 use url::Url;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
-use crate::request::{Parse, ParseError};
+macro_rules! parse_required_field {
+    ($map:expr, $key:expr, $type:path) => {{
+        let raw = $map
+            .remove($key)
+            .ok_or_else(|| ParseError::MissingHeader(format!("Missing header: {}", $key)))?;
+        raw.parse()?
+    }};
+}
+
+#[derive(Error, Debug)]
+pub enum ParseError {
+    #[error("Missing header: {0}")]
+    MissingHeader(String),
+
+    #[error("Invalid url provided: {0:?}")]
+    InvalidUrl(#[from] url::ParseError),
+
+    #[error("Failed to parse as number: {0:?}")]
+    ParseIntError(#[from] std::num::ParseIntError),
+
+    #[error("Failed to parse as number: {0:?}")]
+    TryFromIntError(#[from] std::num::TryFromIntError),
+
+    #[error("Unsupported ContentType: {0}")]
+    UnsupportedContentType(String),
+}
 
 #[derive(Debug)]
 pub struct Header {
-    host: Host,
-    user_agent: UserAgent,
-    content_type: ContentType,
-    content_length: ContentLength,
-    other_headers: OtherHeaders,
+    pub host: Host,
+    pub user_agent: UserAgent,
+    pub content_type: ContentType,
+    pub content_length: ContentLength,
+    pub other_headers: OtherHeaders,
 }
 
 impl Header {
@@ -29,135 +55,95 @@ impl Header {
             other_headers,
         }
     }
-
-    pub fn content_type(&self) -> &ContentType {
-        &self.content_type
-    }
-
-    pub fn content_length(&self) -> u64 {
-        self.content_length.inner
-    }
 }
 
-#[derive(Debug)]
-pub struct Host {
-    pub inner: String,
-}
+impl TryFrom<&mut HashMap<String, String>> for Header {
+    type Error = ParseError;
 
-impl Parse for Host {
-    type Sanitized = String;
-
-    fn sanitize(data: &str) -> Result<Self::Sanitized, ParseError> {
-        if let Err(err) = Url::parse(data) {
-            return Err(ParseError::UnexpectedEntry(format!(
-                "Invalid host provided: {data}, due to: {err:?}"
-            )));
-        }
-
-        Ok(data.to_owned())
-    }
-
-    fn parse(data: &str) -> Result<Self, ParseError> {
+    fn try_from(value: &mut HashMap<String, String>) -> Result<Self, Self::Error> {
         Ok(Self {
-            inner: Self::sanitize(data)?.to_owned(),
+            host: parse_required_field!(value, "Host", Host),
+            user_agent: parse_required_field!(value, "User-Agent", UserAgent),
+            content_type: parse_required_field!(value, "Content-Type", ContentType),
+            content_length: parse_required_field!(value, "Content-Length", ContentLength),
+            other_headers: value.clone().into(),
         })
     }
 }
 
 #[derive(Debug)]
-pub struct UserAgent {
-    pub inner: String,
+pub struct Host(String);
+
+impl FromStr for Host {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Url::parse(s)?;
+
+        Ok(Self(s.to_owned()))
+    }
 }
 
-impl Parse for UserAgent {
-    type Sanitized = String;
+#[derive(Debug)]
+pub struct UserAgent(String);
 
-    fn sanitize(data: &str) -> Result<Self::Sanitized, ParseError> {
-        if data.is_empty() {
-            return Err(ParseError::UnexpectedEntry(
-                "Invalid user agent was provided: {data}".to_owned(),
-            ));
+impl FromStr for UserAgent {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            return Err(Self::Err::MissingHeader("User-Agent".to_owned()));
         }
 
-        Ok(data.to_owned())
-    }
-
-    fn parse(data: &str) -> Result<Self, ParseError> {
-        Ok(Self {
-            inner: Self::sanitize(data)?.to_owned(),
-        })
+        Ok(Self(s.to_owned()))
     }
 }
 
 #[derive(Debug)]
 pub enum ContentType {
-    TextType(Text),
-    ApplicationType(Application),
+    TextPlain,
+    ApplicationJson,
 }
 
-#[derive(Debug)]
-pub enum Text {
-    Plain,
-}
+impl FromStr for ContentType {
+    type Err = ParseError;
 
-#[derive(Debug)]
-pub enum Application {
-    Json,
-}
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let sanitized_s = s.split_once(';').map(|(before, _)| before).unwrap_or(s);
 
-impl Parse for ContentType {
-    type Sanitized = String;
-
-    fn sanitize(data: &str) -> Result<Self::Sanitized, ParseError> {
-        data.split(';')
-            .next()
-            .ok_or_else(|| {
-                ParseError::UnexpectedEntry("Content-type is empty in data: {data}".to_owned())
-            })
-            .map(|data| data.to_owned())
-    }
-
-    fn parse(data: &str) -> Result<Self, ParseError> {
-        match Self::sanitize(data)?.as_str() {
-            "text/plain" => Ok(ContentType::TextType(Text::Plain)),
-            "application/json" => Ok(ContentType::ApplicationType(Application::Json)),
-            unknown => Err(ParseError::StructParseError(format!(
-                "This application type is not supported: {unknown}"
+        match sanitized_s {
+            "text/plain" => Ok(ContentType::TextPlain),
+            "application/json" => Ok(ContentType::ApplicationJson),
+            unknown => Err(Self::Err::UnsupportedContentType(format!(
+                "Unsupported content type: {unknown}"
             ))),
         }
     }
 }
 
-#[derive(Debug)]
-pub struct ContentLength {
-    inner: u64,
+#[derive(Debug, Copy, Clone)]
+pub struct ContentLength(u64);
+
+impl FromStr for ContentLength {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
+    }
 }
 
-impl Parse for ContentLength {
-    type Sanitized = u64;
-
-    fn sanitize(data: &str) -> Result<Self::Sanitized, ParseError> {
-        data.parse::<u64>().map_err(|err| {
-            ParseError::UnexpectedEntry(format!(
-                "Failed to parse {data} as Content Length, due to {err:?}"
-            ))
-        })
-    }
-
-    fn parse(data: &str) -> Result<Self, ParseError> {
-        Ok(Self {
-            inner: Self::sanitize(data)?,
-        })
+impl TryInto<usize> for ContentLength {
+    type Error = ParseError;
+    fn try_into(self) -> Result<usize, Self::Error> {
+        self.0.try_into().map_err(ParseError::TryFromIntError)
     }
 }
 
 #[derive(Debug)]
-pub struct OtherHeaders {
-    inner: HashMap<String, String>,
-}
+pub struct OtherHeaders(HashMap<String, String>);
 
 impl From<HashMap<String, String>> for OtherHeaders {
     fn from(value: HashMap<String, String>) -> Self {
-        Self { inner: value }
+        Self(value)
     }
 }

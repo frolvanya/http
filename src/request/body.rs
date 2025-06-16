@@ -1,45 +1,42 @@
-use super::{
-    header::{Application, ContentType, Text},
-    ParseError,
-};
+use thiserror::Error;
 
-#[derive(Debug, Default, Clone)]
-pub struct Body {
-    pub inner: Vec<u8>,
+use crate::request::header::ContentType;
+
+#[derive(Error, Debug)]
+pub enum ParseError {
+    #[error("Invalid bytes: {0:?}")]
+    InvalidBytes(#[from] std::string::FromUtf8Error),
+
+    #[error("Invalid JSON: {0:?}")]
+    InvalidJson(#[from] serde_json::Error),
 }
 
-impl From<&Vec<u8>> for Body {
-    fn from(value: &Vec<u8>) -> Self {
-        Self {
-            inner: value.clone(),
-        }
-    }
+#[derive(Debug, Default)]
+pub struct Body(BodyType);
+
+#[derive(Debug, Clone)]
+pub enum BodyType {
+    TextPlain(String),
+    ApplicationJson(serde_json::Value),
 }
 
-impl From<&str> for Body {
-    fn from(value: &str) -> Self {
-        Self {
-            inner: value.as_bytes().to_vec().clone(),
-        }
-    }
-}
-
-impl std::fmt::Display for Body {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            std::str::from_utf8(&self.inner).expect("Vec of valid bytes")
-        )
+impl Default for BodyType {
+    fn default() -> Self {
+        BodyType::TextPlain(String::new())
     }
 }
 
 impl Body {
-    pub fn parse(body_data: &Vec<u8>, content_type: &ContentType) -> Result<Self, ParseError> {
-        match content_type {
-            ContentType::TextType(Text::Plain) => Ok(Self::from(body_data)),
-            // TODO: parse using serde or smth
-            ContentType::ApplicationType(Application::Json) => Ok(Self::from(body_data)),
-        }
+    pub fn parse(body_data: Vec<u8>, content_type: &ContentType) -> Result<Self, ParseError> {
+        let body_str = String::from_utf8(body_data)?;
+
+        let body = match content_type {
+            ContentType::TextPlain => Self(BodyType::TextPlain(body_str)),
+            ContentType::ApplicationJson => {
+                Self(BodyType::ApplicationJson(serde_json::from_str(&body_str)?))
+            }
+        };
+
+        Ok(body)
     }
 }

@@ -8,7 +8,7 @@ pub struct RequestMessage {
 }
 
 impl RequestMessage {
-    pub fn new(
+    pub const fn new(
         request_line: request_line::RequestLine,
         header: header::Header,
         body: body::Body,

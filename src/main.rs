@@ -18,8 +18,8 @@ async fn main() -> Result<()> {
     tracing::subscriber::set_global_default(subscriber)
         .context("Failed to set global subscriber")?;
 
-    let host = std::env::var("HOST").unwrap_or("127.0.0.1".to_owned());
-    let port = std::env::var("PORT").unwrap_or("8080".to_owned());
+    let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_owned());
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_owned());
 
     let url = format!("{host}:{port}");
 
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
         tokio::spawn(async move {
             match response::handle(stream).await {
                 Ok(response_message) => {
-                    tracing::info!("Generated response message as {response_message:?}")
+                    tracing::info!("Generated response message as {response_message:?}");
                 }
                 Err(err) => tracing::error!("Error while handling incoming stream: {err:?}"),
             }

@@ -8,7 +8,7 @@ pub struct ResponseMessage {
 }
 
 impl ResponseMessage {
-    pub fn new(
+    pub const fn new(
         response_line: response_line::ResponseLine,
         header: header::Header,
         body: body::Body,

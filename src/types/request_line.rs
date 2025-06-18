@@ -24,6 +24,7 @@ pub enum ParseError {
     InvalidHttpVersion(String),
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct RequestLine {
     pub request_type: RequestType,
@@ -37,7 +38,7 @@ impl FromStr for RequestLine {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let sanitized_s = s
             .split_ascii_whitespace()
-            .map(|component| component.to_owned())
+            .map(std::borrow::ToOwned::to_owned)
             .collect::<Vec<_>>();
 
         if sanitized_s.len() != 3 {
@@ -80,10 +81,6 @@ impl FromStr for RequestType {
 pub struct Path(String);
 
 impl Path {
-    pub fn new(path: String) -> Self {
-        Self(path)
-    }
-
     pub fn get_path(&self) -> &str {
         &self.0
     }
@@ -122,7 +119,7 @@ impl std::fmt::Display for HttpVersionEnum {
 pub struct HttpVersion(HttpVersionEnum);
 
 impl HttpVersion {
-    pub fn new(http_version: HttpVersionEnum) -> Self {
+    pub const fn new(http_version: HttpVersionEnum) -> Self {
         Self(http_version)
     }
 }
@@ -149,7 +146,7 @@ impl FromStr for HttpVersion {
             })?;
 
         match sanitized_s {
-            "1.1" => Ok(HttpVersion(HttpVersionEnum::V1_1)),
+            "1.1" => Ok(Self(HttpVersionEnum::V1_1)),
             unknown => Err(Self::Err::InvalidHttpVersion(format!(
                 "HTTP version {unknown} is not supported"
             ))),

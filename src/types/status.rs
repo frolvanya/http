@@ -17,15 +17,11 @@ impl Status {
     pub const NOT_FOUND_STATUS_NAME: &str = "Not found";
     pub const INTERNAL_SERVER_ERROR_STATUS_NAME: &str = "Internal Server Error";
 
-    pub const OK: Self = Status(200);
-    pub const NOT_FOUND: Self = Status(404);
-    pub const INTERNAL_SERVER_ERROR: Self = Status(500);
+    pub const OK: Self = Self(200);
+    pub const NOT_FOUND: Self = Self(404);
+    pub const INTERNAL_SERVER_ERROR: Self = Self(500);
 
-    pub fn new(status_code: u64) -> Self {
-        Self(status_code)
-    }
-
-    pub fn status_code(&self) -> u64 {
+    pub const fn status_code(&self) -> u64 {
         self.0
     }
 }

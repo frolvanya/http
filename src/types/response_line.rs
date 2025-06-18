@@ -7,7 +7,7 @@ pub struct ResponseLine {
 }
 
 impl ResponseLine {
-    pub fn new(http_version: request_line::HttpVersion, status: status::Status) -> Self {
+    pub const fn new(http_version: request_line::HttpVersion, status: status::Status) -> Self {
         Self {
             http_version,
             status,

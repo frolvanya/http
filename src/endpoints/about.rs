@@ -34,12 +34,12 @@ pub async fn handle(mut request_message: RequestMessage) -> ResponseMessage {
         contents.as_bytes().to_vec(),
         &request_message.header.content_type,
     ) else {
-        let reponse_line = ResponseLine::new(
+        let response_line = ResponseLine::new(
             HttpVersion::new(HttpVersionEnum::V1_1),
             Status::INTERNAL_SERVER_ERROR,
         );
 
-        return ResponseMessage::new(reponse_line, request_message.header, Body::default());
+        return ResponseMessage::new(response_line, request_message.header, Body::default());
     };
 
     ResponseMessage::new(response_line, request_message.header, body)

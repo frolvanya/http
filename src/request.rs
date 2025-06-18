@@ -64,7 +64,7 @@ pub async fn parse_request(
                     )
                 );
             }
-        } else if let Some((key, value)) = line.split_once(":") {
+        } else if let Some((key, value)) = line.split_once(':') {
             raw_headers.insert(key.trim_end().to_string(), value.trim_start().to_string());
         }
     }

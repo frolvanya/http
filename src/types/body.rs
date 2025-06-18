@@ -15,11 +15,11 @@ pub enum ParseError {
 pub struct Body(BodyType);
 
 impl Body {
-    pub fn new(body_type: BodyType) -> Self {
+    pub const fn new(body_type: BodyType) -> Self {
         Self(body_type)
     }
 
-    pub fn get_type(&self) -> &BodyType {
+    pub const fn get_type(&self) -> &BodyType {
         &self.0
     }
 }
@@ -47,7 +47,7 @@ impl std::fmt::Display for BodyType {
 
 impl Default for BodyType {
     fn default() -> Self {
-        BodyType::TextPlain(String::new())
+        Self::TextPlain(String::new())
     }
 }
 

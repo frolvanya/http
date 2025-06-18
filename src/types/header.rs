@@ -28,12 +28,9 @@ fn capitalize(word: &str) -> String {
     word.split('-')
         .map(|part| {
             let mut chars = part.chars();
-            match chars.next() {
-                Some(first) => {
-                    first.to_uppercase().collect::<String>() + &chars.as_str().to_ascii_lowercase()
-                }
-                None => String::new(),
-            }
+            chars.next().map_or_else(String::new, |first| {
+                first.to_uppercase().collect::<String>() + &chars.as_str().to_ascii_lowercase()
+            })
         })
         .collect::<Vec<_>>()
         .join("-")
@@ -63,22 +60,6 @@ pub struct Header {
     pub content_type: ContentType,
     pub content_length: ContentLength,
     pub other_headers: OtherHeaders,
-}
-
-impl Header {
-    pub fn new(
-        host: Host,
-        content_type: ContentType,
-        content_length: ContentLength,
-        other_headers: OtherHeaders,
-    ) -> Self {
-        Self {
-            host,
-            content_type,
-            content_length,
-            other_headers,
-        }
-    }
 }
 
 impl std::fmt::Display for Header {
@@ -144,11 +125,11 @@ impl FromStr for ContentType {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let sanitized_s = s.split_once(';').map(|(before, _)| before).unwrap_or(s);
+        let sanitized_s = s.split_once(';').map_or(s, |(before, _)| before);
 
         match sanitized_s {
-            "text/plain" => Ok(ContentType::TextPlain),
-            "application/json" => Ok(ContentType::ApplicationJson),
+            "text/plain" => Ok(Self::TextPlain),
+            "application/json" => Ok(Self::ApplicationJson),
             unknown => Err(Self::Err::UnsupportedContentType(format!(
                 "Unsupported content type: {unknown}"
             ))),
@@ -159,9 +140,9 @@ impl FromStr for ContentType {
 impl std::fmt::Display for ContentType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let content_type_str = match self {
-            ContentType::TextPlain => "text/plain",
-            ContentType::TextHtml => "text/html",
-            ContentType::ApplicationJson => "application/json",
+            Self::TextPlain => "text/plain",
+            Self::TextHtml => "text/html",
+            Self::ApplicationJson => "application/json",
         };
 
         write!(
@@ -177,7 +158,7 @@ impl std::fmt::Display for ContentType {
 pub struct ContentLength(u64);
 
 impl ContentLength {
-    pub fn new(content_length: u64) -> Self {
+    pub const fn new(content_length: u64) -> Self {
         Self(content_length)
     }
 }

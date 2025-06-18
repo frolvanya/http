@@ -11,8 +11,9 @@ pub async fn handle(
     tracing::info!("Parsed request message: {:?}", request_message);
 
     let response = match request_message.request_line.uri.get_path() {
+        "/" => crate::endpoints::root::handle(request_message),
+        "/api" => crate::endpoints::api::handle(request_message),
         "/about" => crate::endpoints::about::handle(request_message).await,
-        "/api" => crate::endpoints::api::handle(request_message).await,
         route => return Err(request::RequestMessageError::UnknownRoute(route.to_owned())),
     };
 

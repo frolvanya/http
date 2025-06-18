@@ -21,7 +21,7 @@ struct ApiResponse {
     c: u64,
 }
 
-pub async fn handle(mut request_message: RequestMessage) -> ResponseMessage {
+pub fn handle(mut request_message: RequestMessage) -> ResponseMessage {
     if request_message.request_line.request_type != RequestType::Get {
         let reponse_line =
             ResponseLine::new(HttpVersion::new(HttpVersionEnum::V1_1), Status::NOT_FOUND);

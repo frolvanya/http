@@ -22,9 +22,9 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct RequestLine {
-    pub request_type: RequestType,
-    pub uri: Path,
-    pub version: HttpVersion,
+    request_type: RequestType,
+    uri: Path,
+    version: HttpVersion,
 }
 
 impl FromStr for RequestLine {

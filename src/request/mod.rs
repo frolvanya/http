@@ -66,11 +66,13 @@ pub async fn parse_request(stream: &mut TcpStream) -> Result<RequestMessage, Req
         let mut line = String::new();
         reader.read_line(&mut line).await?;
 
-        if line == "\r\n" {
+        line = line.trim().to_ascii_lowercase();
+
+        if line.is_empty() {
             break;
         }
 
-        if let Ok(parsed_request_line) = line.trim_end().parse() {
+        if let Ok(parsed_request_line) = line.parse() {
             if request_line.is_none() {
                 request_line = Some(parsed_request_line);
             } else {
@@ -80,8 +82,8 @@ pub async fn parse_request(stream: &mut TcpStream) -> Result<RequestMessage, Req
                     )
                 );
             }
-        } else if let Some((key, value)) = line.trim_end().split_once(":") {
-            raw_headers.insert(key.trim().to_string(), value.trim().to_string());
+        } else if let Some((key, value)) = line.split_once(":") {
+            raw_headers.insert(key.trim_end().to_string(), value.trim_start().to_string());
         }
     }
 
@@ -92,9 +94,9 @@ pub async fn parse_request(stream: &mut TcpStream) -> Result<RequestMessage, Req
     let header = header::Header::try_from(&mut raw_headers)?;
 
     let content_length = header.content_length.try_into()?;
-    let mut body = vec![0u8; content_length];
 
     let body = if content_length > 0 {
+        let mut body = vec![0u8; content_length];
         reader.read_exact(&mut body).await?;
         body::Body::parse(body, &header.content_type)?
     } else {
@@ -106,8 +108,6 @@ pub async fn parse_request(stream: &mut TcpStream) -> Result<RequestMessage, Req
 
 pub async fn handle(mut stream: TcpStream) -> Result<RequestMessage, RequestMessageError> {
     let request_message = parse_request(&mut stream).await?;
-
-    tracing::info!("Parsed request message: {request_message:?}");
 
     // TODO: add an option to return html files
     let response_body = format!(

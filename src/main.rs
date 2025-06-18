@@ -2,7 +2,10 @@ use tokio::net::TcpListener;
 
 use anyhow::{Context, Result};
 
+mod endpoints;
 mod request;
+mod response;
+mod types;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,9 +36,9 @@ async fn main() -> Result<()> {
         };
 
         tokio::spawn(async move {
-            match request::handle(stream).await {
-                Ok(request_message) => {
-                    tracing::info!("Parsed request message as {request_message:?}")
+            match response::handle(stream).await {
+                Ok(response_message) => {
+                    tracing::info!("Generated response message as {response_message:?}")
                 }
                 Err(err) => tracing::error!("Error while handling incoming stream: {err:?}"),
             }

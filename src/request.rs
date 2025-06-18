@@ -2,13 +2,11 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
     net::TcpStream,
 };
 
-mod body;
-mod header;
-mod request_line;
+use crate::types::{body, header, request, request_line};
 
 #[derive(Error, Debug)]
 pub enum RequestMessageError {
@@ -32,31 +30,15 @@ pub enum RequestMessageError {
 
     #[error("Body parse error: {0:?}")]
     BodyParseError(#[from] body::ParseError),
-}
 
-#[derive(Debug)]
-pub struct RequestMessage {
-    request_line: request_line::RequestLine,
-    header: header::Header,
-    body: body::Body,
-}
-
-impl RequestMessage {
-    fn new(
-        request_line: request_line::RequestLine,
-        header: header::Header,
-        body: body::Body,
-    ) -> Self {
-        Self {
-            request_line,
-            header,
-            body,
-        }
-    }
+    #[error("Unknown route: {0:?}")]
+    UnknownRoute(String),
 }
 
 #[tracing::instrument(name = "handle")]
-pub async fn parse_request(stream: &mut TcpStream) -> Result<RequestMessage, RequestMessageError> {
+pub async fn parse_request(
+    stream: &mut TcpStream,
+) -> Result<request::RequestMessage, RequestMessageError> {
     let mut reader = BufReader::new(stream);
 
     let mut raw_headers = HashMap::new();
@@ -103,27 +85,5 @@ pub async fn parse_request(stream: &mut TcpStream) -> Result<RequestMessage, Req
         body::Body::default()
     };
 
-    Ok(RequestMessage::new(request_line, header, body))
-}
-
-pub async fn handle(mut stream: TcpStream) -> Result<RequestMessage, RequestMessageError> {
-    let request_message = parse_request(&mut stream).await?;
-
-    // TODO: add an option to return html files
-    let response_body = format!(
-        "Hello, world!\nHere is your request printed:\n{:?}",
-        request_message.body
-    );
-
-    // TODO: Make response builder
-    let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n",
-        response_body.len()
-    );
-
-    stream.write_all(response.as_bytes()).await?;
-    stream.write_all(response_body.as_bytes()).await?;
-    stream.flush().await?;
-
-    Ok(request_message)
+    Ok(request::RequestMessage::new(request_line, header, body))
 }

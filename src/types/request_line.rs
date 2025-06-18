@@ -2,8 +2,12 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-const HTTP_PREFIX: &str = "HTTP";
+const HTTP_PREFIX: &str = "http";
 const FRONT_SLASH_PREFIX: &str = "/";
+const GET_METHOD_NAME: &str = "get";
+const POST_METHOD_NAME: &str = "post";
+const PUT_METHOD_NAME: &str = "put";
+const DELETE_METHOD_NAME: &str = "delete";
 
 #[derive(Error, Debug)]
 pub enum ParseError {
@@ -22,9 +26,9 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub struct RequestLine {
-    request_type: RequestType,
-    uri: Path,
-    version: HttpVersion,
+    pub request_type: RequestType,
+    pub uri: Path,
+    pub http_version: HttpVersion,
 }
 
 impl FromStr for RequestLine {
@@ -43,12 +47,12 @@ impl FromStr for RequestLine {
         Ok(Self {
             request_type: sanitized_s[0].parse()?,
             uri: sanitized_s[1].parse()?,
-            version: sanitized_s[2].parse()?,
+            http_version: sanitized_s[2].parse()?,
         })
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RequestType {
     Get,
     Post,
@@ -61,10 +65,10 @@ impl FromStr for RequestType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "GET" => Self::Get,
-            "POST" => Self::Post,
-            "PUT" => Self::Put,
-            "DELETE" => Self::Delete,
+            GET_METHOD_NAME => Self::Get,
+            POST_METHOD_NAME => Self::Post,
+            PUT_METHOD_NAME => Self::Put,
+            DELETE_METHOD_NAME => Self::Delete,
             unknown => {
                 return Err(Self::Err::InvalidRequestType(unknown.to_owned()));
             }
@@ -74,6 +78,16 @@ impl FromStr for RequestType {
 
 #[derive(Debug)]
 pub struct Path(String);
+
+impl Path {
+    pub fn new(path: String) -> Self {
+        Self(path)
+    }
+
+    pub fn get_path(&self) -> &str {
+        &self.0
+    }
+}
 
 impl FromStr for Path {
     type Err = ParseError;
@@ -92,8 +106,32 @@ pub enum HttpVersionEnum {
     V1_1,
 }
 
+impl std::fmt::Display for HttpVersionEnum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::V1_1 => "1.1",
+            }
+        )
+    }
+}
+
 #[derive(Debug)]
 pub struct HttpVersion(HttpVersionEnum);
+
+impl HttpVersion {
+    pub fn new(http_version: HttpVersionEnum) -> Self {
+        Self(http_version)
+    }
+}
+
+impl std::fmt::Display for HttpVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", HTTP_PREFIX.to_ascii_uppercase(), self.0)
+    }
+}
 
 impl FromStr for HttpVersion {
     type Err = ParseError;

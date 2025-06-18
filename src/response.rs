@@ -2,6 +2,7 @@ use tokio::{io::AsyncWriteExt, net::TcpStream};
 
 use crate::{request, types};
 
+#[tracing::instrument(name = "handle")]
 pub async fn handle(
     mut stream: TcpStream,
 ) -> Result<types::response::ResponseMessage, request::RequestMessageError> {

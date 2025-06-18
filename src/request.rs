@@ -35,7 +35,7 @@ pub enum RequestMessageError {
     UnknownRoute(String),
 }
 
-#[tracing::instrument(name = "handle")]
+#[tracing::instrument(name = "parse_request")]
 pub async fn parse_request(
     stream: &mut TcpStream,
 ) -> Result<request::RequestMessage, RequestMessageError> {
